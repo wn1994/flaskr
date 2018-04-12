@@ -1,0 +1,6 @@
+flaskr/venv/
+**.db
+**.pyc
+.idea
+flaskr/.idea/
+
