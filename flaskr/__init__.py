@@ -15,21 +15,25 @@ from flask import Flask, g, render_template
 from blueprints.flaskr import init_db
 from blueprints import bp
 
-
-def create_app(config=None):
-    app = Flask(__name__)
-    app.config.update(dict(
-        DATABASE=os.path.join(app.root_path, 'flaskr.db'),
+default_config = dict(
+        DATABASE=os.path.join(os.path.dirname(__file__), 'flaskr.db'),
         DEBUG=True,
         SECRET_KEY=b'_5#y2L"F4Q8z\n\xec]/',
         USERNAME='admin',
         PASSWORD='admin'
-    ))
+    )
+
+
+def create_app(config=None, is_initdb=False):
+    app = Flask(__name__)
+    app.config.update(default_config)
     app.config.update(config or {})
     app.config.from_envvar('FLASKR_SETTINGS', silent=True)
     register_blueprints(app)
-    with app.app_context():
-        init_db()
+    if is_initdb:
+        init_db(app.config['DATABASE'])
+    # with app.app_context():
+    #     init_db()
     # register_cli(app)
     register_teardowns(app)
     register_404(app)

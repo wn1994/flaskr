@@ -1,5 +1,6 @@
+import os
 from sqlite3 import dbapi2 as sqlite3
-from flask import Blueprint, request, session, g, redirect, url_for, abort, \
+from flask import request, session, g, redirect, url_for, abort, \
     render_template, flash, current_app
 from . import bp
 
@@ -11,27 +12,27 @@ def connect_db():
     return rv
 
 
-def init_db():
+def init_db(db_path):
     """Initializes the database."""
-    db = get_db()
-    with current_app.open_resource('schema.sql', mode='r') as f:
+    db = sqlite3.connect(db_path)
+    db.row_factory = sqlite3.Row
+    with open(os.path.join(os.path.dirname(db_path), 'schema.sql'), mode='r') as f:
         db.cursor().executescript(f.read())
     db.commit()
 
 
+@bp.before_request
 def get_db():
     """Opens a new database connection if there is none yet for the
     current application context.
     """
     if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = connect_db()
-    return g.sqlite_db
+        g.db = connect_db()
 
 
 @bp.route('/')
 def show_entries():
-    db = get_db()
-    cur = db.execute('select title, text from entries order by id desc')
+    cur = g.db.execute('select title, text from entries order by id desc')
     entries = cur.fetchall()
     return render_template('show_entries.html', entries=entries)
 
@@ -40,11 +41,10 @@ def show_entries():
 def add_entry():
     if not session.get('logged_in'):
         abort(401)
-    db = get_db()
-    db.execute('insert into entries (title, text) values (?, ?)', [request.form['title'], request.form['text']])
-    db.commit()
+    g.db.execute('insert into entries (title, text) values (?, ?)', [request.form['title'], request.form['text']])
+    g.db.commit()
     flash('New entry was successfully posted')
-    # print url_for('.add_entry')
+    # print url_for('.add_entry')  #/add
     return redirect(url_for('.show_entries'))
 
 
